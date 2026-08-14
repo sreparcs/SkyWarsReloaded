@@ -12,12 +12,29 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <!-- 统一 spigot-api 版本为官方规范格式 -->
+        <spigot-api.version>1.20.6-R0.1-SNAPSHOT</spigot-api.version>
     </properties>
 
     <repositories>
+        <!-- 1. 优先：Spigot 官方仓库（spigot-api 快照版本唯一有效源） -->
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+        <!-- 2. 失效仓库保留但重定向，避免500错误 + 保留依赖索引 -->
         <repository>
             <id>rapture-snapshots</id>
-            <url>https://nexuslite.gcnt.net/repos/other</url>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+        <!-- 3. 兜底：Minecraft 官方库 -->
+        <repository>
+            <id>minecraft-libraries</id>
+            <url>https://libraries.minecraft.net</url>
         </repository>
     </repositories>
 
@@ -34,10 +51,11 @@
             <version>2.8.0</version>
             <scope>provided</scope>
         </dependency>
+        <!-- 修正 spigot-api 版本为规范格式 -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20-R0.1-SNAPSHOT</version>
+            <version>${spigot-api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

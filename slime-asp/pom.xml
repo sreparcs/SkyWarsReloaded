@@ -14,20 +14,24 @@
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <!-- 添加仓库超时配置，避免卡壳 -->
+        <maven.wagon.http.connectionTimeout>3000</maven.wagon.http.connectionTimeout>
+        <maven.wagon.http.retryHandler.count>1</maven.wagon.http.retryHandler.count>
     </properties>
 
     <repositories>
+        <!-- 优先：有效仓库（先从这里找） -->
         <repository>
-            <id>bukkitmc</id>
-            <url>https://nexuslite.gcnt.net/repos/bukkit/</url>
-        </repository>
-        <repository>
-            <id>gcnt-other</id>
-            <url>https://nexuslite.gcnt.net/repos/other/</url>
+            <id>maven-central</id>
+            <url>https://repo1.maven.org/maven2/</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
         </repository>
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
         </repository>
         <repository>
             <id>minecraft-libraries</id>
@@ -35,22 +39,40 @@
             <url>https://libraries.minecraft.net</url>
         </repository>
         <repository>
-            <id>rapture-releases</id>
-            <url>https://repo.rapture.pw/repository/maven-releases/</url>
-        </repository>
-        <repository>
-            <id>rapture-snapshots</id>
-            <url>https://repo.rapture.pw/repository/maven-snapshots/</url>
-        </repository>
-        <!-- InfernalSuite RELEASE -->
-        <repository>
             <id>is-releases</id>
             <url>https://repo.infernalsuite.com/repository/maven-releases/</url>
         </repository>
-        <!-- InfernalSuite SNAPSHOT -->
         <repository>
             <id>is-snapshots</id>
             <url>https://repo.infernalsuite.com/repository/maven-snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+
+        <!-- 失效仓库保留，但禁用访问（重定向到中央仓库） -->
+        <repository>
+            <id>rapture-releases</id>
+            <url>https://repo1.maven.org/maven2/</url> <!-- 重定向到中央仓库 -->
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>rapture-snapshots</id>
+            <url>https://repo1.maven.org/maven2/</url> <!-- 重定向到中央仓库 -->
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>bukkitmc</id>
+            <url>https://repo1.maven.org/maven2/</url> <!-- 重定向到中央仓库 -->
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>gcnt-other</id>
+            <url>https://repo1.maven.org/maven2/</url> <!-- 重定向到中央仓库 -->
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
         </repository>
     </repositories>
 
@@ -72,21 +94,26 @@
             <artifactId>annotations</artifactId>
             <version>23.0.0</version>
         </dependency>
-        <!-- SLIME WORLDS: ASP DEPENDENCY -->
+        <!-- flow-nbt依赖（本地已安装，优先使用） -->
+        <dependency>
+            <groupId>com.flowpowered</groupId>
+            <artifactId>flow-nbt</artifactId>
+            <version>2.0.2</version>
+            <scope>compile</scope>
+        </dependency>
+        <!-- ASWM依赖（保留，从InfernalSuite仓库获取） -->
         <dependency>
             <groupId>com.infernalsuite.aswm</groupId>
             <artifactId>api</artifactId>
             <version>1.20-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <!-- SLIME WORLDS: ASWM PLUGIN -->
         <dependency>
             <groupId>com.infernalsuite.aswm</groupId>
             <artifactId>plugin</artifactId>
             <version>1.20</version>
             <scope>provided</scope>
         </dependency>
-        <!-- SLIME WORLDS: ASP NMS -->
         <dependency>
             <groupId>com.infernalsuite.aswm</groupId>
             <artifactId>nms</artifactId>

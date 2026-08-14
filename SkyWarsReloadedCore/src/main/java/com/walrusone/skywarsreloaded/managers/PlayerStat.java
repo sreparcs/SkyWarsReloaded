@@ -250,7 +250,7 @@ public class PlayerStat {
                         .replace("{nextevent_name}", eventName)
                         .replace("{kills}", gMap.getPlayerKills(player) + "")
                         .replace("{mapname}", gMap.getDisplayName())
-                        .replace("{time}", "" + Util.get().getFormattedTime(gMap.getTimer()))
+                        .replace("{time}", String.format("%02d:%02d", gMap.getTimer()/60, gMap.getTimer()%60))
                         .replace("{aliveplayers}", "" + gMap.getAlivePlayers().size())
                         .replace("{players}", "" + currentPlayers)
                         .replace("{maxplayers}", "" + gMap.getTeamCards().size() * gMap.getTeamSize())

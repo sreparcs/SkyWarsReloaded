@@ -180,6 +180,22 @@ public class MatchManager {
         }
     }
 
+    private void handleCrossWorldVisibility(GameMap gameMap) {
+        Collection<Player> allPlayers = gameMap.getAllPlayers();
+        for (Player viewer : allPlayers) {
+            for (Player target : allPlayers) {
+                if (viewer.equals(target)) continue;
+                // 检测是否同世界
+                if (viewer.getWorld().equals(target.getWorld())) {
+                    viewer.showPlayer(target);
+                } else {
+                    viewer.hidePlayer(target);
+                }
+            }
+        }
+    }
+
+
     public void teleportToArena(final GameMap gameMap, PlayerCard pCard) {
         if (pCard.getPlayer() == null || (!gameMap.getMatchState().equals(MatchState.WAITINGLOBBY) && !gameMap.getMatchState().equals(MatchState.WAITINGSTART)) ||
                 (gameMap.getMatchState().equals(MatchState.WAITINGSTART) && pCard.getTeamCard().getSpawns() == null)) {
@@ -247,6 +263,7 @@ public class MatchManager {
                 preparePlayer(player, gameMap);
             }
         }.runTaskLater(SkyWarsReloaded.get(), 5);
+// MatchManager.java 的 teleportToArena 方法中
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -254,6 +271,23 @@ public class MatchManager {
                 player.setFlying(false);
                 player.setAllowFlight(false);
                 player.setFlySpeed(0.1f);
+
+                // ========== 修正后的代码（适配你的 PlayerNameColorManager） ==========
+                try {
+                    // 1. 获取当前地图的所有玩家
+                    Collection<Player> allPlayers = gameMap.getAllPlayers();
+                    // 2. 初始化颜色管理器（你的构造方法需要 plugin + gameMap）
+                    if (gameMap.nameColorManager == null) {
+                        gameMap.nameColorManager = new PlayerNameColorManager(SkyWarsReloaded.get(), gameMap);
+                    }
+                    // 3. 调用你写的 initNameColorTeams 方法（核心修正：方法名+参数匹配）
+                    gameMap.nameColorManager.initNameColorTeams(player, allPlayers, player.getUniqueId());
+
+                } catch (Exception e) {
+                    // 异常日志（方便排查）
+                    SkyWarsReloaded.get().getLogger().severe("[SWR-" + gameMap.getName() + "] 给玩家 " + player.getName() + " 应用颜色失败：" + e.getMessage());
+                    e.printStackTrace();
+                }
             }
         }.runTaskLater(SkyWarsReloaded.get(), 40);
 
@@ -295,6 +329,7 @@ public class MatchManager {
         }
 
         gameMap.setMatchState(gameMap.getMatchState());
+        handleCrossWorldVisibility(gameMap);
         if (SkyWarsReloaded.getCfg().titlesEnabled()) {
             String subtitle = new Messaging.MessageFormatter()
                     .setVariable("map", gameMap.getName())
@@ -498,7 +533,19 @@ public class MatchManager {
                 Util.get().sendTitle(player, 5, 60, 5, new Messaging.MessageFormatter().setVariable("map", gameMap.getDisplayName()).format("titles.start-title"),
                         new Messaging.MessageFormatter().setVariable("map", gameMap.getDisplayName()).format("titles.start-subtitle"));
             }
+            try {
+                // 1. 确保颜色管理器已初始化
+                if (gameMap.nameColorManager == null) {
+                    gameMap.nameColorManager = new PlayerNameColorManager(SkyWarsReloaded.get(), gameMap);
+                }
+                // 2. 重新初始化当前玩家的颜色（覆盖计分板重置）
+                gameMap.nameColorManager.initNameColorTeams(player, gameMap.getAllPlayers(), player.getUniqueId());
+
+            } catch (Exception e) {
+                SkyWarsReloaded.get().getLogger().severe("[SWR-" + gameMap.getName() + "] 游戏开始补全颜色失败：" + e.getMessage());
+            }
         }
+
         if (gameMap.getMatchState() != MatchState.ENDING) {
             this.matchCountdown(gameMap);
         }
@@ -515,7 +562,9 @@ public class MatchManager {
         if (SkyWarsReloaded.getCfg().isHealthVoteEnabled()) {
             gameMap.getHealthOption().completeOption();
         }
+
         selectKit(gameMap);
+        handleCrossWorldVisibility(gameMap);
         gameMap.getCage().removeSpawnHousing(gameMap);
         gameMap.getWaitingPlayers().clear();
 
@@ -794,6 +843,12 @@ public class MatchManager {
                             if (SkyWarsReloaded.getCfg().bungeeMode()) {
                                 Util.get().doCommands(SkyWarsReloaded.getCfg().getGameEndCommands(), null);
                             }
+                            gameMap.resetNameColor();
+                            for (Player player : gameMap.getAllPlayers()) {
+                                for (Player other : Bukkit.getOnlinePlayers()) {
+                                    player.showPlayer(other);
+                                }
+                            }
                             gameMap.refreshMap();
                             if (debug) {
                                 Util.get().logToFile(getDebugName(gameMap) + ChatColor.YELLOW + "SkyWars Match Has Ended - Arena has been refreshed");
@@ -806,6 +861,10 @@ public class MatchManager {
     }
 
     public void checkForWin(GameMap gameMap) {
+        if (gameMap == null || gameMap.getMatchState() != MatchState.PLAYING) {
+            return;
+        }
+
         int teamsLeft = gameMap.getTeamsLeft();
         if (SkyWarsReloaded.getCfg().debugEnabled())
             SkyWarsReloaded.get().getLogger().info("MatchManager::checkForWin teamsLeft: " + teamsLeft);

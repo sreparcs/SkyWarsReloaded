@@ -46,7 +46,30 @@ public class GameBoard {
             }
         }
 
+        // SWR 原生逻辑：更新玩家计分板
         PlayerStat.updateScoreboard(player, sb);
+
+        // ========== 核心注入：SWR 更新完计分板后，立刻加颜色 ==========
+        try {
+            // 1. 获取当前玩家的计分板（就是 SWR 刚设置的那个）
+            org.bukkit.scoreboard.Scoreboard scoreboard = player.getScoreboard();
+            if (scoreboard == null) {
+                scoreboard = org.bukkit.Bukkit.getScoreboardManager().getMainScoreboard();
+            }
+
+            // 2. 初始化颜色管理器（用 SWR 的 GameMap）
+            if (gMap.nameColorManager == null) {
+                gMap.nameColorManager = new PlayerNameColorManager(SkyWarsReloaded.get(), gMap);
+            }
+
+            // 3. 给当前玩家注入颜色（用 SWR 的计分板）
+            gMap.nameColorManager.initNameColorTeams(player, gMap.getAllPlayers(), player.getUniqueId());
+
+            // 日志验证（可选）
+
+        } catch (Exception e) {
+            SkyWarsReloaded.get().getLogger().severe("[SWR-" + gMap.getName() + "] 注入颜色失败：" + e.getMessage());
+        }
     }
 
     public void updateScoreboardVar(ScoreVar var) {
@@ -60,16 +83,21 @@ public class GameBoard {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    restartTimer--;
-                    if (restartTimer == 0) {
+                    if (gMap.getMatchState() != MatchState.ENDING) {
                         this.cancel();
+                        return;
+                    }
+
+                    // Keep this task alive for the zero tick. MatchManager uses that
+                    // tick to remove everyone and refresh the arena.
+                    if (restartTimer > 0) {
+                        restartTimer--;
                     }
                     updateScoreboard();
                 }
             }.runTaskTimer(SkyWarsReloaded.get(), 0, 20);
         }
     }
-
     public int getRestartTimer() {
         return restartTimer;
     }

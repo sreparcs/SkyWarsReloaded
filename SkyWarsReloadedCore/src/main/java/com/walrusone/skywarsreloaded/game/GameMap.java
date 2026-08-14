@@ -115,6 +115,7 @@ public class GameMap {
     private boolean registered;
     private final String arenakey;
     private final GameQueue joinQueue;
+    public PlayerNameColorManager nameColorManager;
     private boolean inEditing = false;
     private CoordLoc spectateSpawn;
     private CoordLoc lookDirection;
@@ -174,8 +175,10 @@ public class GameMap {
         if (SkyWarsReloaded.getCfg().spectateMenuEnabled()) {
             new TeamSpectateMenu(this);
         }
-    }
 
+
+        this.nameColorManager = new PlayerNameColorManager(SkyWarsReloaded.get(), this);
+    }
 
 
     /*Player Handling Methods*/
@@ -562,6 +565,11 @@ public class GameMap {
         this.removeWaitingPlayer(uuid);
         this.update();
         gameboard.updateScoreboard();
+
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null && nameColorManager != null) {
+            nameColorManager.clearPlayerData(player);
+        }
     }
 
     public ArrayList<Player> getAlivePlayers() {
@@ -1009,6 +1017,10 @@ public class GameMap {
             }
         }
         SkyWarsReloaded.getWM().deleteWorld(this.getName(), false);
+
+        if (nameColorManager != null) {
+            nameColorManager.resetAllPlayersNameColor();
+        }
     }
 
     private void loadMap() {
@@ -1216,11 +1228,16 @@ public class GameMap {
                     gameboard.updateScoreboard();
                     MatchManager.get().start(gMap);
                     update();
+
+                    Collection<Player> gamePlayers = getAllPlayers();
+                    if (nameColorManager != null && !gamePlayers.isEmpty()) {
+                        nameColorManager.initAllNameColorTeams(gamePlayers);
+                        SkyWarsReloaded.get().getLogger().info("[" + name + "] 已为 " + gamePlayers.size() + " 名玩家应用名字颜色");
+                    }
                 }
             }.runTaskLater(SkyWarsReloaded.get(), 50);
         }
     }
-
     /*Bungeemode Methods*/
 
     public void updateArenaManager() {
@@ -1567,6 +1584,23 @@ public class GameMap {
     public void setLookDirection(Location location) {
         lookDirection = new CoordLoc(location.getBlockX(), location.getBlockY(), location.getBlockZ());
         saveArenaData();
+    }
+
+    public void resetNameColor() {
+        // 判空：避免空指针异常
+        if (this.nameColorManager != null) {
+            try {
+                // 调用颜色管理器的清理方法
+                this.nameColorManager.resetAllPlayersNameColor();
+                // 清空引用，释放内存
+                this.nameColorManager = null;
+                // 打印日志（可选，方便排查）
+                SkyWarsReloaded.get().getLogger().info("[SWR-" + this.getName() + "] 已清理所有玩家的名字颜色团队");
+            } catch (Exception e) {
+                SkyWarsReloaded.get().getLogger().severe("[SWR-" + this.getName() + "] 清理颜色团队失败：" + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
     public void setFriendlyFire(boolean state) {
