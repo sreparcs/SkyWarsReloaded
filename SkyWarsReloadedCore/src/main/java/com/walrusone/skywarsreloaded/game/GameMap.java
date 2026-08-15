@@ -1625,7 +1625,6 @@ public class GameMap {
                 // 清空引用，释放内存
                 this.nameColorManager = null;
                 // 打印日志（可选，方便排查）
-                SkyWarsReloaded.get().getLogger().info("[SWR-" + this.getName() + "] 已清理所有玩家的名字颜色团队");
             } catch (Exception e) {
                 SkyWarsReloaded.get().getLogger().severe("[SWR-" + this.getName() + "] 清理颜色团队失败：" + e.getMessage());
                 e.printStackTrace();
