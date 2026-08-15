@@ -391,6 +391,10 @@ public class GameMap {
     }
 
     public boolean addPlayers(@Nullable TeamCard teamToTry, final Player player) {
+        if (player == null || containsPlayer(player.getUniqueId())) {
+            return false;
+        }
+
         // If busy return false
         if (Util.get().isBusy(player.getUniqueId())) {
             if (SkyWarsReloaded.getCfg().debugEnabled()) {
@@ -559,7 +563,9 @@ public class GameMap {
 
     public void removePlayer(final UUID uuid) {
         for (TeamCard tCard : teamCards) {
-            if (tCard.removePlayer(uuid)) break;
+            while (tCard.removePlayer(uuid)) {
+                // Clear every duplicate card for this UUID left by an earlier join attempt.
+            }
         }
         spectators.remove(uuid);
         this.removeWaitingPlayer(uuid);
@@ -585,6 +591,14 @@ public class GameMap {
             }
         }
         return alivePlayers;
+    }
+
+    public boolean cleanupOrphanedPlayer(UUID uuid) {
+        if (uuid == null || !mapContainsDead(uuid) || spectators.contains(uuid) || waitingPlayers.contains(uuid)) {
+            return false;
+        }
+        removePlayer(uuid);
+        return true;
     }
 
     public boolean mapContainsDead(UUID uuid) {
@@ -1388,13 +1402,28 @@ public class GameMap {
     }
 
     public int getPlayerCount() {
-        int count = 0;
+        return getPlayerUUIDs().size();
+    }
+
+    private boolean containsPlayer(UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
+        return getPlayerUUIDs().contains(uuid);
+    }
+
+    private Set<UUID> getPlayerUUIDs() {
+        Set<UUID> players = new HashSet<>();
         for (TeamCard tCard : teamCards) {
             for (PlayerCard pCard : tCard.getPlayerCards()) {
-                if (pCard.getPlayer() != null) count++;
+                if (pCard.getUUID() != null) {
+                    players.add(pCard.getUUID());
+                }
             }
         }
-        return count;
+        players.addAll(waitingPlayers);
+        players.addAll(spectators);
+        return players;
     }
 
     public int getMinTeams() {

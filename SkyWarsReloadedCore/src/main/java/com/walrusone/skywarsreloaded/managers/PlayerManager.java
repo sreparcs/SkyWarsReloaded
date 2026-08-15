@@ -110,8 +110,8 @@ public class PlayerManager {
                                     announceToOthers
                             );
                 } else {
-                    this.swr.getLogger().warning(
-                            "Tried to remove a player from a playing game that was neither a spectator nor an alive player!");
+                    // A disconnect can race with death/spectator setup. Release any orphaned cards.
+                    gameMap.removePlayer(pUuid);
                 }
             }
             // Should player be restored back to how they were before entering the game

@@ -105,26 +105,37 @@ public class PlayerDeathListener implements org.bukkit.event.Listener {
         gameMap.getGameBoard().updateScoreboard();
     }
 
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDeathByDeathEvent(PlayerDeathEvent event) {
-        GameMap gameMap = MatchManager.get().getPlayerMap(event.getEntity());
-        if (gameMap == null) return;
-        /*event.setDeathMessage("");
-
-        Player player = event.getEntity();
-        player.setHealthScale(20);
-        player.setMaxHealth(20);
-        player.setHealth(20);
-        player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
-
-        EntityDamageEvent.DamageCause damageCause = EntityDamageEvent.DamageCause.CUSTOM;
-        if (player.getLastDamageCause() != null) {
-            damageCause = player.getLastDamageCause().getCause();
+        final Player player = event.getEntity();
+        final GameMap gameMap = MatchManager.get().getPlayerMap(player);
+        if (gameMap == null || gameMap.getMatchState() != MatchState.PLAYING ||
+                !gameMap.getAlivePlayers().contains(player)) {
+            return;
         }
 
-        SkyWarsReloaded.get().getPlayerManager().removePlayer(player, PlayerRemoveReason.DEATH, damageCause, true);*/
-        gameMap.getGameBoard().updateScoreboard();
+        // This is a fallback for deaths not intercepted by the damage listener.
+        // Without it vanilla respawns the eliminated player at the arena world's spawn.
+        event.setDeathMessage("");
+        event.getDrops().clear();
+        event.setDroppedExp(0);
+
+        final EntityDamageEvent.DamageCause damageCause = player.getLastDamageCause() == null
+                ? EntityDamageEvent.DamageCause.CUSTOM
+                : player.getLastDamageCause().getCause();
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline() || gameMap.getMatchState() != MatchState.PLAYING ||
+                        !gameMap.getAlivePlayers().contains(player)) {
+                    return;
+                }
+                Util.get().respawnPlayer(player);
+                SkyWarsReloaded.get().getPlayerManager().removePlayer(
+                        player, PlayerRemoveReason.DEATH, damageCause, true);
+            }
+        }.runTask(SkyWarsReloaded.get());
     }
 
     @EventHandler

@@ -64,6 +64,16 @@ public class MatchManager {
      * @return GameMap The map that was successfully joined or null
      */
     public GameMap joinGame(Player player, GameType type) {
+        if (player == null) {
+            return null;
+        }
+        for (GameMap gameMap : SkyWarsReloaded.getGameMapMgr().getMapsCopy()) {
+            gameMap.cleanupOrphanedPlayer(player.getUniqueId());
+        }
+        if (getPlayerMap(player) != null || getSpectatorMap(player) != null) {
+            return null;
+        }
+
         GameMap map = null;
         int highest = -1;
         ArrayList<GameMap> games = SkyWarsReloaded.getGameMapMgr().getPlayableArenas(type);
