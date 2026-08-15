@@ -50,6 +50,8 @@ public class PlayerManager {
     }
 
     public void removePlayer(final Player playerRemoved, PlayerRemoveReason removeReason, @Nullable EntityDamageEvent.DamageCause deathCause, boolean shouldSendToLobbyIn, boolean announceToOthers) {
+        playerRemoved.closeInventory();
+
         // General constants
         final UUID pUuid = playerRemoved.getUniqueId();
         final GameMap gameMap = matchManager.getPlayerMap(playerRemoved);
@@ -239,8 +241,12 @@ public class PlayerManager {
             swr.getLogger().warning("Spectator " + playerRemoved.getName() + " is not in spectator mode! If this is not expected, please report this.");
         }
         // ---------------- GAME MAP UPDATES -----------------
-        // Remove from spectators
-        gameMap.removePlayer(pUuid);
+        // A dead player's card must remain in the team so the team stays
+        // eliminated while that player is spectating.
+        if (!gameMap.mapContainsDead(pUuid)) {
+            gameMap.removePlayer(pUuid);
+        }
+        gameMap.getSpectators().remove(pUuid);
 
         // ------------------- MESSAGES --------------------
         // TODO: Tell other spectators that a spectator has left?
@@ -322,7 +328,16 @@ public class PlayerManager {
         Bukkit.getPluginManager().callEvent(new SkyWarsLeaveEvent(playerRemoved, gameMap));
 
         // ---------------- GAME MAP UPDATES -----------------
-        gameMap.removePlayer(pUuid);
+        // Keep a dead player's card in the team. TeamCard.isEliminated()
+        // relies on the dead flag to determine when only one team remains.
+        if (removeReason.equals(PlayerRemoveReason.DEATH)) {
+            gameMap.removeWaitingPlayer(pUuid);
+            gameMap.getSpectators().remove(pUuid);
+            gameMap.update();
+            gameMap.getGameBoard().updateScoreboard();
+        } else {
+            gameMap.removePlayer(pUuid);
+        }
         if (SkyWarsReloaded.getCfg().spectateEnable() && removeReason.equals(PlayerRemoveReason.DEATH)) {
             this.addSpectator(gameMap, playerRemoved);
             shouldSendToLobby = false;

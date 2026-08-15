@@ -618,10 +618,12 @@ public class MatchManager {
 
         new BukkitRunnable() {
             public void run() {
-                if (gameMap.getMatchState() == MatchState.ENDING) {
+                if (gameMap.getMatchState() != MatchState.PLAYING) {
                     this.cancel();
-                } else {
-                    for (MatchEvent event : gameMap.getEvents()) {
+                    return;
+                }
+
+                for (MatchEvent event : gameMap.getEvents()) {
                         if (event.isEnabled() && event.willFire() && !event.hasFired()) {
                             if (event.getStartTime() <= gameMap.getTimer()) {
                                 event.doEvent();
@@ -632,7 +634,6 @@ public class MatchManager {
                             }
                         }
                     }
-                }
                 if (gameMap.isThunder()) {
                     if (gameMap.getStrikeCounter() == gameMap.getNextStrike()) {
                         World mapWorld = gameMap.getCurrentWorld();
@@ -660,6 +661,10 @@ public class MatchManager {
     }
 
     private void won(final GameMap gameMap, final TeamCard winners) {
+        if (gameMap == null || gameMap.getMatchState() != MatchState.PLAYING) {
+            return;
+        }
+
         SkyWarsReloaded plugin = SkyWarsReloaded.get();
         Server server = plugin.getServer();
 
