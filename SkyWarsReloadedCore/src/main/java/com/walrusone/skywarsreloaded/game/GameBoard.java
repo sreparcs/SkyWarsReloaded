@@ -49,6 +49,10 @@ public class GameBoard {
         // SWR 原生逻辑：更新玩家计分板
         PlayerStat.updateScoreboard(player, sb);
 
+        if (gMap.getMatchState() == MatchState.ENDING || gMap.getMatchState() == MatchState.OFFLINE) {
+            return;
+        }
+
         // ========== 核心注入：SWR 更新完计分板后，立刻加颜色 ==========
         try {
             // 1. 获取当前玩家的计分板（就是 SWR 刚设置的那个）

@@ -1,5 +1,6 @@
 package com.walrusone.skywarsreloaded.game;
 
+import com.walrusone.skywarsreloaded.enums.MatchState;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -17,7 +18,6 @@ import java.util.HashMap;
 public class PlayerNameColorManager {
     private final Map<UUID, TeamPair> playerTeams = new HashMap<>();
 
-    private final Map<UUID, Objective> healthObjectives = new HashMap<>();
     private final JavaPlugin plugin;
     private final GameMap gameMap;
     private int healthUpdateTaskId = -1;
@@ -38,12 +38,9 @@ public class PlayerNameColorManager {
             Scoreboard scoreboard = viewer.getScoreboard();
             if (scoreboard == null) continue;
 
-            // 获取当前玩家的血量显示Objective（优先用缓存）
-            Objective healthObjective = healthObjectives.get(viewer.getUniqueId());
-            if (healthObjective == null) {
-                healthObjective = scoreboard.getObjective("health_display");
-                if (healthObjective == null) continue;
-            }
+            // Scoreboards can be rebuilt during match cleanup, so never retain Objective instances.
+            Objective healthObjective = scoreboard.getObjective("health_display");
+            if (healthObjective == null) continue;
 
             // 遍历所有游戏内玩家更新血量
             for (Player target : gameMap.getAllPlayers()) {
@@ -97,41 +94,23 @@ public class PlayerNameColorManager {
         healthUpdateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
             @Override
             public void run() {
-                updateAllPlayersHealth(); // 替换为新的血量更新方法
+                if (gameMap.getMatchState() != MatchState.PLAYING) {
+                    stopHealthUpdateTask();
+                    return;
+                }
+                updateAllPlayersHealth();
             }
         }, 0L, 5L); // 缩短更新间隔到5刻（0.25秒），显示更实时
     }
 
     public void initNameColorTeams(Player player, Collection<Player> allPlayers, UUID selfUuid) {
+        if (gameMap.getMatchState() == MatchState.ENDING || gameMap.getMatchState() == MatchState.OFFLINE) {
+            return;
+        }
         setupNameColorTeams(player, allPlayers, selfUuid);
 
         if (healthUpdateTaskId == -1) {
             startHealthUpdateTask();
-        }
-        for (UUID existingPlayerUuid : playerTeams.keySet()) {
-            if (existingPlayerUuid.equals(selfUuid)) {
-                continue;
-            }
-
-            Player existingPlayer = plugin.getServer().getPlayer(existingPlayerUuid);
-            if (existingPlayer == null || !existingPlayer.isOnline()) {
-                continue;
-            }
-
-            TeamPair existingTeams = playerTeams.get(existingPlayerUuid);
-            if (existingTeams == null) {
-                continue;
-            }
-
-            if (!existingTeams.enemyTeam.hasEntry(player.getName())) {
-                existingTeams.enemyTeam.addEntry(player.getName());
-
-            }
-
-            TeamPair newPlayerTeams = playerTeams.get(selfUuid);
-            if (newPlayerTeams != null && !newPlayerTeams.enemyTeam.hasEntry(existingPlayer.getName())) {
-                newPlayerTeams.enemyTeam.addEntry(existingPlayer.getName());
-            }
         }
     }
 
@@ -180,9 +159,6 @@ public class PlayerNameColorManager {
             healthObjective.setDisplaySlot(DisplaySlot.BELOW_NAME); // 显示在玩家头顶
         }
 
-// 缓存Objective，避免重复获取
-        healthObjectives.put(selfUuid, healthObjective);
-
 // 2. 为当前玩家设置血量（1.8.8支持基础血量+金苹果吸收值）
         double playerRawHealth = player.getHealth();
         double playerAbsorption = getAbsorptionAmount1_8_8(player); // 调用1.8.8专用方法
@@ -209,44 +185,50 @@ public class PlayerNameColorManager {
 
     public void clearPlayerData(Player player) {
 
-        if (healthUpdateTaskId != -1) {
-            plugin.getServer().getScheduler().cancelTask(healthUpdateTaskId);
-            healthUpdateTaskId = -1;
-        }
-
         UUID uuid = player.getUniqueId();
         TeamPair teams = playerTeams.get(uuid);
 
         if (teams != null) {
-            teams.selfTeam.unregister();
-            teams.enemyTeam.unregister();
+            unregisterTeam(teams.selfTeam);
+            unregisterTeam(teams.enemyTeam);
         }
 
         playerTeams.remove(uuid);
 
-        for (UUID otherUuid : playerTeams.keySet()) {
-            TeamPair otherTeams = playerTeams.get(otherUuid);
-            if (otherTeams != null && otherTeams.enemyTeam.hasEntry(player.getName())) {
-                otherTeams.enemyTeam.removeEntry(player.getName());
-            }
-        }
 
         player.setDisplayName(player.getName());
         player.setPlayerListName(player.getName());
-        healthObjectives.remove(uuid);
+        if (playerTeams.isEmpty()) {
+            stopHealthUpdateTask();
+        }
+    }
+
+    private void unregisterTeam(Team team) {
+        try {
+            team.unregister();
+        } catch (IllegalStateException ignored) {
+            // The player's scoreboard may already have been replaced by another plugin.
+        }
+    }
+
+    private void stopHealthUpdateTask() {
+        if (healthUpdateTaskId != -1) {
+            plugin.getServer().getScheduler().cancelTask(healthUpdateTaskId);
+            healthUpdateTaskId = -1;
+        }
     }
 
     public void resetAllPlayersNameColor() {
+        stopHealthUpdateTask();
         for (TeamPair teams : playerTeams.values()) {
-            teams.selfTeam.unregister();
-            teams.enemyTeam.unregister();
+            unregisterTeam(teams.selfTeam);
+            unregisterTeam(teams.enemyTeam);
         }
 
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             player.setDisplayName(player.getName());
             player.setPlayerListName(player.getName());
         }
-        healthObjectives.clear();
         playerTeams.clear();
     }
 }

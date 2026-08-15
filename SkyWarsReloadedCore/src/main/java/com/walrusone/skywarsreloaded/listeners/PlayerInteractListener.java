@@ -484,6 +484,10 @@ public class PlayerInteractListener implements Listener {
             }
             return;
         }
+        if (playerPlayingMap.getMatchState().equals(MatchState.ENDING)) {
+            e.setCancelled(true);
+            return;
+        }
         if (playerPlayingMap.getMatchState().equals(MatchState.WAITINGSTART) || playerPlayingMap.getMatchState().equals(MatchState.WAITINGLOBBY)) {
             e.setCancelled(true);
             new BukkitRunnable() {
@@ -510,7 +514,13 @@ public class PlayerInteractListener implements Listener {
     @EventHandler
     public void onBlockPlaced(BlockPlaceEvent e) {
         GameMap gameMap = MatchManager.get().getPlayerMap(e.getPlayer());
-        if (gameMap != null || !(e.getBlockPlaced().getState() instanceof Chest)) {
+        if (gameMap != null) {
+            if (gameMap.getMatchState() == MatchState.ENDING) {
+                e.setCancelled(true);
+            }
+            return;
+        }
+        if (!(e.getBlockPlaced().getState() instanceof Chest)) {
             return;
         }
 
