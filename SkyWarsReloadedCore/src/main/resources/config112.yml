@@ -162,6 +162,28 @@ game:
   # Taunts are things to draw attention to the player executing the taunt
   # It will display some particle effects, and optionally a message in the chat
   tauntsEnabled: true
+  # Periodically refills every chest in the arena while a match is running
+  chestRefill:
+    # Whether chests are refilled at all
+    enabled: true
+    # Seconds between two refills
+    interval: 60
+    # Show a floating countdown above chests a player has already opened
+    showHologram: true
+    # Keep a searched chest's lid visually open until the next refill (1.8 only)
+    keepEmptyChestsOpen: true
+  # Four floating leaderboards shown around a player waiting in their start cage
+  cageLeaderboards:
+    # Whether the boards are shown at all
+    enabled: true
+    # How many ranks each board lists
+    size: 25
+    # Blocks between the player and each board; keep it inside the cage walls
+    distance: 3.5
+    # Height of the first line above the player's feet
+    height: 3.0
+    # Vertical gap between two lines
+    lineSpacing: 0.28
   # Levels of game modifiers to be voted for in the game
   # For example Speed II
   modifierLevel:
@@ -436,10 +458,12 @@ disable-commands:
   - msg
   - r
   - sw quit
+  - sw rejoin
   enabled: true
 disable-commands-spectate:
   exceptions:
   - msg
   - r
   - sw quit
+  - sw rejoin
   enabled: true

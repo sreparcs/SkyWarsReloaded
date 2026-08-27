@@ -107,6 +107,12 @@ public class SWRPlaceholderAPI extends PlaceholderExpansion {
                             return "" + topList.get(playerLeaderboardIndex).getXp();
                         case "player":
                             return "" + topList.get(playerLeaderboardIndex).getName();
+                        case "prefix":
+                            // Rank title (LuckPerms prefix) of the player at this position.
+                            return LeaderPrefixResolver.getPrefix(topList.get(playerLeaderboardIndex).getUUID());
+                        case "namecolor":
+                            // Colour code taken from that player's rank, to tint their name.
+                            return LeaderPrefixResolver.getNameColor(topList.get(playerLeaderboardIndex).getUUID());
                         case "games_played":
                             return "" + (topList.get(playerLeaderboardIndex).getLoses() + topList.get(playerLeaderboardIndex).getWins());
                         case "kill_death": {

@@ -38,6 +38,7 @@ public class MainCmdManager implements CommandExecutor, SWRCmdManagerAPI {
         pcmds.add(new SWOptionsCmd("sw"));
         pcmds.add(new SWSpectateCmd("sw"));
         pcmds.add(new SWLobbyTeleportCmd("sw"));
+        pcmds.add(new SWRejoinCmd("sw"));
 
         if (SkyWarsReloaded.getCfg().winsoundMenuEnabled()) {
             pcmds.add(new SWWinsoundCmd("sw"));

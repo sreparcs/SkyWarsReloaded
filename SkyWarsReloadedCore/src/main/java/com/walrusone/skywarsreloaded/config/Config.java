@@ -163,6 +163,15 @@ public class Config {
     private int vip4;
     private int vip5;
     private boolean tauntsEnabled;
+    private boolean chestRefillEnabled = true;
+    private int chestRefillInterval = 60;
+    private boolean chestRefillHologramEnabled = true;
+    private boolean chestRefillKeepOpen = true;
+    private boolean cageLeaderboardsEnabled = true;
+    private int cageLeaderboardSize = 5;
+    private double cageLeaderboardDistance = 1.4D;
+    private double cageLeaderboardHeight = 2.0D;
+    private double cageLeaderboardLineSpacing = 0.28D;
     private boolean titlesEnabled;
     private boolean kitVotingEnabled;
     private int waitTimer;
@@ -345,6 +354,15 @@ public class Config {
             waitTimer =             SkyWarsReloaded.get().getConfig().getInt("game.waitTimer");
             resetTimerOnJoin =      SkyWarsReloaded.get().getConfig().getBoolean("game.resetTimerOnJoin");
             tauntsEnabled =         SkyWarsReloaded.get().getConfig().getBoolean("game.tauntsEnabled");
+            chestRefillEnabled =    SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.enabled", true);
+            chestRefillInterval =   SkyWarsReloaded.get().getConfig().getInt("game.chestRefill.interval", 60);
+            chestRefillHologramEnabled = SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.showHologram", true);
+            chestRefillKeepOpen =   SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.keepEmptyChestsOpen", true);
+            cageLeaderboardsEnabled = SkyWarsReloaded.get().getConfig().getBoolean("game.cageLeaderboards.enabled", true);
+            cageLeaderboardSize =   SkyWarsReloaded.get().getConfig().getInt("game.cageLeaderboards.size", 5);
+            cageLeaderboardDistance = SkyWarsReloaded.get().getConfig().getDouble("game.cageLeaderboards.distance", 1.4D);
+            cageLeaderboardHeight = SkyWarsReloaded.get().getConfig().getDouble("game.cageLeaderboards.height", 2.0D);
+            cageLeaderboardLineSpacing = SkyWarsReloaded.get().getConfig().getDouble("game.cageLeaderboards.lineSpacing", 0.28D);
             titlesEnabled =         SkyWarsReloaded.get().getConfig().getBoolean("titles.enabled");
             kitVotingEnabled =      SkyWarsReloaded.get().getConfig().getBoolean("game.kitVotingEnabled");
             spectateEnabled =       SkyWarsReloaded.get().getConfig().getBoolean("game.spectateEnabled");
@@ -628,6 +646,15 @@ public class Config {
         SkyWarsReloaded.get().getConfig().set("game.spectateEnabled", spectateEnabled);
         SkyWarsReloaded.get().getConfig().set("game.maxMapSize", maxMapSize);
         SkyWarsReloaded.get().getConfig().set("game.tauntsEnabled", tauntsEnabled);
+        SkyWarsReloaded.get().getConfig().set("game.chestRefill.enabled", chestRefillEnabled);
+        SkyWarsReloaded.get().getConfig().set("game.chestRefill.interval", chestRefillInterval);
+        SkyWarsReloaded.get().getConfig().set("game.chestRefill.showHologram", chestRefillHologramEnabled);
+        SkyWarsReloaded.get().getConfig().set("game.chestRefill.keepEmptyChestsOpen", chestRefillKeepOpen);
+        SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.enabled", cageLeaderboardsEnabled);
+        SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.size", cageLeaderboardSize);
+        SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.distance", cageLeaderboardDistance);
+        SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.height", cageLeaderboardHeight);
+        SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.lineSpacing", cageLeaderboardLineSpacing);
         SkyWarsReloaded.get().getConfig().set("enablePressurePlateJoin", pressurePlate);
         SkyWarsReloaded.get().getConfig().set("teleportToSpawnOnJoin", teleportOnJoin);
         SkyWarsReloaded.get().getConfig().set("teleportToSpawnOnWorldEnter", teleportOnWorldEnter);
@@ -781,6 +808,49 @@ public class Config {
 
     public int getWaitTimer() {
         return waitTimer;
+    }
+
+    public boolean isChestRefillEnabled() {
+        return chestRefillEnabled;
+    }
+
+    /** Seconds between two automatic chest refills during a match. */
+    public int getChestRefillInterval() {
+        return chestRefillInterval;
+    }
+
+    public boolean isChestRefillHologramEnabled() {
+        return chestRefillHologramEnabled;
+    }
+
+    /** Keeps looted chests visually open until the next refill (1.8 only). */
+    public boolean isChestRefillKeepOpen() {
+        return chestRefillKeepOpen;
+    }
+
+    /** Shows four floating leaderboards around a player waiting in their cage. */
+    public boolean isCageLeaderboardsEnabled() {
+        return cageLeaderboardsEnabled;
+    }
+
+    /** How many ranks each cage leaderboard lists. */
+    public int getCageLeaderboardSize() {
+        return cageLeaderboardSize;
+    }
+
+    /** Blocks between the caged player and each of the four boards. */
+    public double getCageLeaderboardDistance() {
+        return cageLeaderboardDistance;
+    }
+
+    /** Height of a board's first line above the player's feet. */
+    public double getCageLeaderboardHeight() {
+        return cageLeaderboardHeight;
+    }
+
+    /** Vertical gap between two lines of a cage leaderboard. */
+    public double getCageLeaderboardLineSpacing() {
+        return cageLeaderboardLineSpacing;
     }
 
     public int getTimeAfterMatch() {
@@ -1177,6 +1247,29 @@ public class Config {
 
     public void setHologramsEnabled(boolean b) {
         useHolograms = b;
+    }
+
+    /**
+     * True when the leaderboard data of this stat has to be loaded from storage.
+     * <p>
+     * A stat is loaded when its own leaderboard is switched on, but also when
+     * another feature needs the numbers: the cage leaderboards read the very same
+     * top lists, and without this they would sit in front of an empty data source
+     * and render nothing at all.
+     */
+    public boolean isLeaderDataNeeded(LeaderType type) {
+        if (isTypeEnabled(type)) return true;
+        if (!cageLeaderboardsEnabled) return false;
+
+        switch (type) {
+            case WINS:
+            case KILLS:
+            case DEATHS:
+            case XP:
+                return true;
+            default:
+                return false;
+        }
     }
 
     public boolean isTypeEnabled(LeaderType type) {

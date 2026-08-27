@@ -14,6 +14,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
 
 public abstract class HologramsUtil {
     protected static FileConfiguration fc;
@@ -85,7 +86,9 @@ public abstract class HologramsUtil {
         }
         for (String var : variables) {
             String value = SWRPlaceholderAPI.getLeaderBoardVariable(var, type);
-            toReturn = toReturn.replaceAll("\\{" + var + "}", value);
+            // quoteReplacement: a resolved rank prefix may contain '$' or '\', which
+            // would otherwise be read as a regex group reference and throw.
+            toReturn = toReturn.replaceAll("\\{" + var + "}", Matcher.quoteReplacement(value));
         }
         return toReturn;
     }

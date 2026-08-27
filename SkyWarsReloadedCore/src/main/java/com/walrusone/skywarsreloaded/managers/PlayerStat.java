@@ -246,6 +246,7 @@ public class PlayerStat {
                 return line
                         .replace("{players_needed}", (gMap.getAllPlayers().size() >= gMap.getMinTeams() ? "0" : gMap.getMinTeams()-gMap.getAllPlayers().size()) + "")
                         .replace("{waitingtimer}", Util.get().getFormattedTime(gMap.getTimer()))
+                        .replace("{next_refill}", gMap.getChestRefillManager().getFormattedTimeLeft())
                         .replace("{nextevent_time}", eventTime)
                         .replace("{nextevent_name}", eventName)
                         .replace("{kills}", gMap.getPlayerKills(player) + "")

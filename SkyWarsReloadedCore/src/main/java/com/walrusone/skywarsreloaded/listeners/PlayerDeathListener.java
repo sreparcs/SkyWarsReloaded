@@ -21,7 +21,18 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 public class PlayerDeathListener implements org.bukkit.event.Listener {
+
+    /**
+     * Players whose vanilla death is currently being converted into a SkyWars elimination.
+     * The respawn handler uses this to keep them out of the arena world spawn.
+     */
+    private final Set<UUID> pendingDeaths = new HashSet<>();
+
     public PlayerDeathListener() {
     }
 
@@ -41,6 +52,21 @@ public class PlayerDeathListener implements org.bukkit.event.Listener {
             e.setCancelled(true);
             return;
         }
+
+        // Only real in-game deaths are eliminations. Damage during the cage/lobby countdown,
+        // during the PVP grace timer and during the ending phase is cancelled by
+        // ArenaDamageListener, which runs at HIGHEST - after this handler. Without this guard a
+        // lethal hit in those states would already have dropped and wiped the player's
+        // inventory and eliminated them before that cancellation happens.
+        if (gameMap.getMatchState() != MatchState.PLAYING ||
+                gameMap.getSpectators().contains(player.getUniqueId()) ||
+                !gameMap.getAlivePlayers().contains(player)) {
+            return;
+        }
+        if (gameMap.isDisableDamage() && e.getCause() != EntityDamageEvent.DamageCause.VOID) {
+            return;
+        }
+
         // If the player doesn't die from damage, ignore
         if (player.getHealth() - e.getFinalDamage() > 0) return;
 
@@ -105,20 +131,41 @@ public class PlayerDeathListener implements org.bukkit.event.Listener {
         gameMap.getGameBoard().updateScoreboard();
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeathByDeathEvent(PlayerDeathEvent event) {
         final Player player = event.getEntity();
         final GameMap gameMap = MatchManager.get().getPlayerMap(player);
+
         if (gameMap == null || gameMap.getMatchState() != MatchState.PLAYING ||
                 !gameMap.getAlivePlayers().contains(player)) {
+            // The player is not an active competitor, but they may still have died inside an
+            // arena world (already eliminated, spectating, or the match just ended). Vanilla
+            // would respawn them at that arena's world spawn - above the map - so route the
+            // respawn out of the arena instead.
+            GameMap arenaWorldMap = SkyWarsReloaded.getGameMapMgr().getMap(player.getWorld().getName());
+            if (arenaWorldMap != null) {
+                pendingDeaths.add(player.getUniqueId());
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        pendingDeaths.remove(player.getUniqueId());
+                    }
+                }.runTaskLater(SkyWarsReloaded.get(), 20L);
+            }
             return;
         }
 
-        // This is a fallback for deaths not intercepted by the damage listener.
-        // Without it vanilla respawns the eliminated player at the arena world's spawn.
+        // This is a fallback for deaths not intercepted by the damage listener (for example a
+        // hit whose final damage is raised by another handler running after this listener).
+        // The inventory is dropped by the server at the death location, exactly like the
+        // damage path does, so the kill still leaves loot behind.
         event.setDeathMessage("");
-        event.getDrops().clear();
         event.setDroppedExp(0);
+
+        // Mark the player so the respawn handler below can override the vanilla respawn
+        // location. Without this the player is placed at the arena world spawn - alive,
+        // in survival mode and with an empty inventory - instead of being eliminated.
+        pendingDeaths.add(player.getUniqueId());
 
         final EntityDamageEvent.DamageCause damageCause = player.getLastDamageCause() == null
                 ? EntityDamageEvent.DamageCause.CUSTOM
@@ -127,13 +174,18 @@ public class PlayerDeathListener implements org.bukkit.event.Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (!player.isOnline() || gameMap.getMatchState() != MatchState.PLAYING ||
-                        !gameMap.getAlivePlayers().contains(player)) {
-                    return;
+                try {
+                    if (!player.isOnline()) return;
+                    // Skip the death screen. This fires PlayerRespawnEvent, which is handled
+                    // below while this UUID is still marked as a pending death.
+                    if (player.isDead()) Util.get().respawnPlayer(player);
+                    // Re-read the map: the player may already have been removed in the meantime.
+                    if (MatchManager.get().getPlayerMap(player) == null) return;
+                    SkyWarsReloaded.get().getPlayerManager().removePlayer(
+                            player, PlayerRemoveReason.DEATH, damageCause, true);
+                } finally {
+                    pendingDeaths.remove(player.getUniqueId());
                 }
-                Util.get().respawnPlayer(player);
-                SkyWarsReloaded.get().getPlayerManager().removePlayer(
-                        player, PlayerRemoveReason.DEATH, damageCause, true);
             }
         }.runTask(SkyWarsReloaded.get());
     }
@@ -176,7 +228,27 @@ public class PlayerDeathListener implements org.bukkit.event.Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onRespawn(final PlayerRespawnEvent a1) {
-        final PlayerData pData = PlayerData.getPlayerData(a1.getPlayer().getUniqueId());
+        final Player respawningPlayer = a1.getPlayer();
+
+        // Vanilla death that is still being converted into an elimination: the player is not
+        // flagged dead in the game map yet, so getDeadPlayerMap() cannot find them. Send them
+        // to the spectator spawn (or the lobby) instead of the arena world spawn.
+        if (pendingDeaths.contains(respawningPlayer.getUniqueId())) {
+            GameMap pendingMap = MatchManager.get().getPlayerMap(respawningPlayer);
+            Location target = null;
+            if (pendingMap != null && SkyWarsReloaded.getCfg().spectateEnable()) {
+                World world = pendingMap.getCurrentWorld();
+                CoordLoc specSpawn = pendingMap.getSpectateSpawn();
+                if (world != null && specSpawn != null) {
+                    target = new Location(world, specSpawn.getX(), specSpawn.getY(), specSpawn.getZ());
+                }
+            }
+            if (target == null) target = SkyWarsReloaded.getCfg().getSpawn();
+            if (target != null) a1.setRespawnLocation(target);
+            return;
+        }
+
+        final PlayerData pData = PlayerData.getPlayerData(respawningPlayer.getUniqueId());
         if (pData != null) {
             if (SkyWarsReloaded.getCfg().spectateEnable()) {
                 final GameMap gMap = MatchManager.get().getDeadPlayerMap(a1.getPlayer());
@@ -209,6 +281,20 @@ public class PlayerDeathListener implements org.bukkit.event.Listener {
         if (Util.get().isSpawnWorld(a1.getPlayer().getWorld())) {
             a1.setRespawnLocation(SkyWarsReloaded.getCfg().getSpawn());
             com.walrusone.skywarsreloaded.managers.PlayerStat.updatePlayer(a1.getPlayer().getUniqueId().toString());
+        }
+
+        // Final safety net: never leave a respawn pointing into an arena world unless the
+        // player actually belongs to that match (alive or spectating). A leftover arena
+        // respawn is what drops players onto/above the map with an empty inventory.
+        Location finalRespawn = a1.getRespawnLocation();
+        if (finalRespawn != null && finalRespawn.getWorld() != null) {
+            GameMap arenaMap = SkyWarsReloaded.getGameMapMgr().getMap(finalRespawn.getWorld().getName());
+            if (arenaMap != null &&
+                    !arenaMap.getSpectators().contains(respawningPlayer.getUniqueId()) &&
+                    MatchManager.get().getPlayerMap(respawningPlayer) != arenaMap) {
+                Location lobby = SkyWarsReloaded.getCfg().getSpawn();
+                if (lobby != null) a1.setRespawnLocation(lobby);
+            }
         }
     }
 }

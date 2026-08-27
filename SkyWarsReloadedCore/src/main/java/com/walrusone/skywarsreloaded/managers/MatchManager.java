@@ -260,6 +260,7 @@ public class MatchManager {
             }
         }
 
+
         Util.get().clear(player);
         player.setGameMode(GameMode.ADVENTURE);
         if (SkyWarsReloaded.getCfg().debugEnabled()) SkyWarsReloaded.get().getLogger().info("MatchManager::teleportToArena allowing flight for " + player.getName() + " to prevent falling... (will be removed in 2s)");
@@ -267,6 +268,15 @@ public class MatchManager {
         player.setAllowFlight(true);
         player.setFlying(true);
         player.setFlySpeed(0f);
+        // Build the four cage leaderboards once the teleports above have settled,
+        // so the boards line up with the direction the player really ends up facing.
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                gameMap.getCageLeaderboardManager().show(player);
+            }
+        }.runTaskLater(SkyWarsReloaded.get(), 5L);
+
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -575,6 +585,8 @@ public class MatchManager {
 
         selectKit(gameMap);
         handleCrossWorldVisibility(gameMap);
+        // The cages are gone, so the boards that were framed by them go too.
+        gameMap.getCageLeaderboardManager().clearAll();
         gameMap.getCage().removeSpawnHousing(gameMap);
         gameMap.getWaitingPlayers().clear();
 
@@ -625,6 +637,8 @@ public class MatchManager {
         gameMap.getGameBoard().updateScoreboard();
         gameMap.update();
         gameMap.setTimer(this.getGameTime());
+        // Start the chest refill countdown together with the match itself.
+        gameMap.getChestRefillManager().reset();
 
         new BukkitRunnable() {
             public void run() {
@@ -664,6 +678,9 @@ public class MatchManager {
                         gameMap.setStrikeCounter(gameMap.getStrikeCounter() + 1);
                     }
                 }
+                // Drive the chest refill countdown off the same one-second tick so it
+                // can never outlive the match it belongs to.
+                gameMap.getChestRefillManager().tick();
                 gameMap.setTimer(gameMap.getTimer() + 1);
                 gameMap.getGameBoard().updateScoreboardVar(ScoreVar.TIME);
             }
@@ -784,6 +801,10 @@ public class MatchManager {
         }
         if (gameMap.getMatchState() != MatchState.OFFLINE) {
             gameMap.setMatchState(MatchState.ENDING);
+            // Drop the chest countdown holograms and close the looted chest lids
+            // as soon as the match is over.
+            gameMap.getChestRefillManager().clearHolograms();
+            gameMap.getChestRefillManager().closeForcedOpenChests();
             gameMap.getGameBoard().updateScoreboard();
             for (MatchEvent mEvent : gameMap.getEvents()) {
                 if (mEvent.isEnabled() && mEvent.hasFired()) {

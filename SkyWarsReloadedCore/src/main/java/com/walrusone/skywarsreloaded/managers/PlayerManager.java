@@ -120,10 +120,46 @@ public class PlayerManager {
                 if (playerData != null) {
                     // Should player be teleported to lobby or only restored?
                     playerData.restoreToBeforeGameState(removeReason != PlayerRemoveReason.DEATH, shouldSendToLobby);
+                } else if (shouldSendToLobby) {
+                    // Without PlayerData there is nothing to restore, but the player must still
+                    // leave the arena. Otherwise a death leaves them alive in the arena world
+                    // (at its world spawn, above the map) with an emptied inventory.
+                    this.forceLeaveArena(playerRemoved);
                 }
             }
         } else {
             SkyWarsReloaded.get().getLogger().warning("PlayerManager::removePlayer Attempted to remove player but player is not in a game map!");
+        }
+    }
+
+    /**
+     * Last-resort cleanup for a player leaving a match without usable {@link PlayerData}.
+     * Puts the player back into a sane state and moves them out of the arena world.
+     *
+     * @param player The player to move out of the arena
+     */
+    private void forceLeaveArena(final Player player) {
+        if (player == null || !player.isOnline()) return;
+
+        this.swr.getLogger().warning("PlayerManager::removePlayer No player data for " + player.getName() +
+                " - performing a plain teleport out of the arena.");
+
+        player.setGameMode(GameMode.SURVIVAL);
+        SkyWarsReloaded.getNMS().setMaxHealth(player, 20);
+        player.setHealth(20);
+        player.setFoodLevel(20);
+        player.setSaturation(20);
+        player.setFireTicks(0);
+        player.setFallDistance(0.0f);
+        player.setNoDamageTicks(1);
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        PlayerStat.resetScoreboard(player);
+
+        if (SkyWarsReloaded.getCfg().bungeeMode()) {
+            SkyWarsReloaded.get().sendBungeeMsg(player, "Connect", SkyWarsReloaded.getCfg().getBungeeLobby());
+        } else {
+            PlayerData.teleportToBukkitLobby(player);
         }
     }
 

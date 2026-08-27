@@ -309,6 +309,7 @@ public class SkyWarsReloaded extends JavaPlugin implements PluginMessageListener
         this.getServer().getPluginManager().registerEvents(new ProjectileSpleefListener(), this);
         this.getServer().getPluginManager().registerEvents(new RejoinGameListener(), this);
         this.getServer().getPluginManager().registerEvents(new CageMovementListener(), this);
+        this.getServer().getPluginManager().registerEvents(new ChestRefillListener(), this);
 
         // LOAD BEFORE HOLO - Holo needs server to be loaded to update correctly
         load();

@@ -32,9 +32,11 @@ public class Leaderboard {
         loaded.put(LeaderType.XP, false);
 
         for (LeaderType type : LeaderType.values()) {
-            if (SkyWarsReloaded.getCfg().isTypeEnabled(type)) {
+            // Loading is driven by demand, not just by the leaderboard toggles: the
+            // cage leaderboards consume the same data with their own switch.
+            if (SkyWarsReloaded.getCfg().isLeaderDataNeeded(type)) {
                 leaders.put(type, new ArrayList<>());
-                if (SkyWarsReloaded.getCfg().leaderSignsEnabled()) {
+                if (SkyWarsReloaded.getCfg().leaderSignsEnabled() && SkyWarsReloaded.getCfg().isTypeEnabled(type)) {
                     signs.put(type, new HashMap<>());
                     getSigns(type);
                 }
@@ -43,7 +45,7 @@ public class Leaderboard {
 
         SkyWarsReloaded.get().getServer().getScheduler().scheduleSyncRepeatingTask(SkyWarsReloaded.get(), () -> {
             for (LeaderType type : LeaderType.values()) {
-                if (SkyWarsReloaded.getCfg().isTypeEnabled(type)) {
+                if (SkyWarsReloaded.getCfg().isLeaderDataNeeded(type)) {
                     DataStorage.get().updateTop(type, SkyWarsReloaded.getCfg().getLeaderSize());
                 }
             }
@@ -65,7 +67,7 @@ public class Leaderboard {
         loaded.put(type, true);
 
         // Update signs if enabled
-        if (SkyWarsReloaded.getCfg().leaderSignsEnabled() && SkyWarsReloaded.get().isEnabled()) {
+        if (SkyWarsReloaded.getCfg().leaderSignsEnabled() && signs.containsKey(type) && SkyWarsReloaded.get().isEnabled()) {
             new BukkitRunnable() {
                 @Override
                 public void run() {

@@ -115,6 +115,8 @@ public class GameMap {
     private boolean registered;
     private final String arenakey;
     private final GameQueue joinQueue;
+    private final ChestRefillManager chestRefillManager;
+    private final CageLeaderboardManager cageLeaderboardManager;
     public PlayerNameColorManager nameColorManager;
     private boolean inEditing = false;
     private CoordLoc spectateSpawn;
@@ -145,6 +147,8 @@ public class GameMap {
         this.doubleDamageEnabled = false;
         this.timer = SkyWarsReloaded.getCfg().getWaitTimer();
         this.joinQueue = new GameQueue(this);
+        this.chestRefillManager = new ChestRefillManager(this);
+        this.cageLeaderboardManager = new CageLeaderboardManager(this);
         this.arenakey = name + "menu";
         if (SkyWarsReloaded.getCfg().kitVotingEnabled()) {
             kitVoteOption = new KitVoteOption(this, name + "kitVote");
@@ -362,7 +366,6 @@ public class GameMap {
         events.add(new EnderDragonEvent(this, fc.getBoolean("events.EnderDragonEvent.enabled")));
         events.add(new WitherEvent(this, fc.getBoolean("events.WitherEvent.enabled")));
         events.add(new MobSpawnEvent(this, fc.getBoolean("events.MobSpawnEvent.enabled")));
-        events.add(new ChestRefillEvent(this, fc.getBoolean("events.ChestRefillEvent.enabled")));
         events.add(new DeathMatchEvent(this, fc.getBoolean("events.DeathMatchEvent.enabled")));
         events.add(new ArrowRainEvent(this, fc.getBoolean("events.ArrowRainEvent.enabled")));
         events.add(new AnvilRainEvent(this, fc.getBoolean("events.AnvilRainEvent.enabled")));
@@ -569,6 +572,8 @@ public class GameMap {
         }
         spectators.remove(uuid);
         this.removeWaitingPlayer(uuid);
+        // Covers every way out of a cage: quitting, disconnecting or being removed.
+        cageLeaderboardManager.hide(uuid);
         this.update();
         gameboard.updateScoreboard();
 
@@ -1215,6 +1220,8 @@ public class GameMap {
         for (MatchEvent event : events) {
             event.reset();
         }
+        chestRefillManager.reset();
+        cageLeaderboardManager.clearAll();
         healthOption.restore();
         chestOption.restore();
         timeOption.restore();
@@ -2153,6 +2160,14 @@ public class GameMap {
 
     public GameBoard getGameBoard() {
         return gameboard;
+    }
+
+    public ChestRefillManager getChestRefillManager() {
+        return chestRefillManager;
+    }
+
+    public CageLeaderboardManager getCageLeaderboardManager() {
+        return cageLeaderboardManager;
     }
 
     public TeamCard getTeamCardFromName(String name) {

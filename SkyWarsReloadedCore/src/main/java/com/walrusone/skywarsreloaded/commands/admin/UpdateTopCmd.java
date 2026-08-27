@@ -20,7 +20,9 @@ public class UpdateTopCmd extends BaseCmd {
     @Override
     public boolean run(CommandSender sender, Player player, String[] args) {
         for (LeaderType type : LeaderType.values()) {
-            if (SkyWarsReloaded.getCfg().isTypeEnabled(type)) {
+            // Refresh everything that has data loaded, including the stats only the
+            // cage leaderboards use.
+            if (SkyWarsReloaded.getCfg().isLeaderDataNeeded(type)) {
                 DataStorage.get().updateTop(type, SkyWarsReloaded.getCfg().getLeaderSize());
             }
         }

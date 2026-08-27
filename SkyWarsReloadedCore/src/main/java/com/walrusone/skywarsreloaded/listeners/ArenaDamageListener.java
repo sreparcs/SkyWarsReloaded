@@ -36,6 +36,11 @@ public class ArenaDamageListener implements org.bukkit.event.Listener {
          }
     }
 
+    // Never call setCancelled(false) here. PlayerDeathListener runs at HIGH and cancels the
+    // lethal hit after dropping the victim's items, turning it into a SkyWars elimination.
+    // Un-cancelling it re-applied that lethal damage to the already cleared player, so the
+    // server killed them for real and respawned them at the arena world spawn - above the
+    // map, alive and with an empty inventory.
     @EventHandler(priority = EventPriority.HIGHEST)
     public void playerDamagedByAlly(EntityDamageByEntityEvent event) {
         Entity damager = event.getDamager();
@@ -56,7 +61,6 @@ public class ArenaDamageListener implements org.bukkit.event.Listener {
                     event.setCancelled(true);
                 // Process pvp events
                 } else {
-                    event.setCancelled(false);
                     if (gameMap.getProjectilesOnly()) {
                         if ((damager instanceof Projectile)) {
                             doProjectile(gameMap, damager, event, target);
@@ -119,8 +123,6 @@ public class ArenaDamageListener implements org.bukkit.event.Listener {
                     event.setCancelled(true);
                 } else if (gameMap.isDisableDamage() && event.getCause() != EntityDamageEvent.DamageCause.VOID) {
                     event.setCancelled(true);
-                } else {
-                    event.setCancelled(false);
                 }
             }
         }

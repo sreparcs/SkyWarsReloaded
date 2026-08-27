@@ -56,6 +56,17 @@ game:
   spectateEnabled: true
   maxMapSize: 400
   tauntsEnabled: true
+  chestRefill:
+    enabled: true
+    interval: 60
+    showHologram: true
+    keepEmptyChestsOpen: true
+  cageLeaderboards:
+    enabled: true
+    size: 25
+    distance: 3.5
+    height: 3.0
+    lineSpacing: 0.28
   modifierLevel:
     speed:
     strength:
@@ -251,10 +262,12 @@ disable-commands:
   - msg
   - r
   - sw quit
+  - sw rejoin
   enabled: true
 disable-commands-spectate:
   exceptions:
   - msg
   - r
   - sw quit
+  - sw rejoin
   enabled: true
