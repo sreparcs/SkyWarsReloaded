@@ -480,7 +480,6 @@ cageboard:
   layout:
     - 'cageboard.title'
     - ''
-    - ''
     - '{ranks}'
   title: '&4&l≥ &c&l{type} &4&l≤'
   line: '&4{symbol} {prefix}{namecolor}{player} &7- &c{value} &7-'
