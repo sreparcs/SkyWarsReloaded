@@ -140,9 +140,6 @@ public class RejoinGameListener implements Listener {
                 + "{\"text\":\"" + escape(action) + "\","
                 + "\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/sw rejoin\"},"
                 + "\"hoverEvent\":{\"action\":\"show_text\",\"value\":{\"text\":\"" + escape(hover) + "\"}}}]");
-
-        String hint = new Messaging.MessageFormatter().format("game.rejoin.item-hint");
-        if (!hint.trim().isEmpty()) player.sendMessage(hint);
     }
 
     /** Escapes the characters that would break the raw chat JSON. */

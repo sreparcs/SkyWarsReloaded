@@ -195,7 +195,6 @@ game:
     full: '&c新游戏已满，请稍后再试。'
     itemname: '&b&l再玩一局'
     itemlore: '&7右键以开始下一把游戏！'
-    item-hint: '&e也可以使用背包中的&b&l再玩一局&e纸张。'
   broadcast-win: '&6{player1} 在地图 &a{map} 中取得了一场游戏的胜利 '
   won: '&a你在地图 {map} 中赢得了胜利 (+7Elo)'
   lost: ' '
@@ -474,6 +473,15 @@ scoreboards:
     - ''
     - '&bweipu&eNetwork'
 cageboard:
+  # 笼子排行榜的排版。每一项就是一行全息文字，从上往下排：
+  #   '' （两个单引号）      = 一个空白行，用来拉开间距，想加几个就加几个
+  #   '{ranks}'             = 展开成名次行（用下面的 line，条数由 config 的 size 决定）
+  #   其它任何值            = 当成 messages.yml 的键来取，取不到就原样显示
+  layout:
+    - 'cageboard.title'
+    - ''
+    - ''
+    - '{ranks}'
   title: '&4&l≥ &c&l{type} &4&l≤'
   line: '&4{symbol} {prefix}{namecolor}{player} &7- &c{value} &7-'
   no-data: '&7暂无数据'

@@ -15,6 +15,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,9 @@ public class CageLeaderboardManager {
 
     /** How often the board text is refreshed while players wait, in ticks. */
     private static final long REFRESH_TICKS = 20L;
+
+    /** The layout entry that expands into the ranked rows. */
+    private static final String RANKS_TOKEN = "{ranks}";
 
     private final GameMap gMap;
 
@@ -197,38 +202,102 @@ public class CageLeaderboardManager {
      */
     private Board buildBoard(World world, Location anchor, LeaderType type) {
         List<String> lines = renderLines(type);
-        List<ArmorStand> stands = new ArrayList<>(lines.size());
+        // Leaderboard data arrives asynchronously, so the first render is usually
+        // the short "no data" board. Spawning room for the full board right away
+        // means the ranks can appear later without respawning any stands.
+        int capacity = Math.max(boardCapacity(), lines.size());
+        List<ArmorStand> stands = new ArrayList<>(capacity);
 
         double spacing = SkyWarsReloaded.getCfg().getCageLeaderboardLineSpacing();
         double top = anchor.getY() + SkyWarsReloaded.getCfg().getCageLeaderboardHeight();
 
-        for (int i = 0; i < lines.size(); i++) {
+        for (int i = 0; i < capacity; i++) {
             Location lineLocation = new Location(world, anchor.getX(), top - (i * spacing), anchor.getZ());
-            ArmorStand stand = spawnStand(lineLocation, lines.get(i));
+            ArmorStand stand = spawnStand(lineLocation, i < lines.size() ? lines.get(i) : "");
             if (stand != null) stands.add(stand);
         }
 
         return stands.isEmpty() ? null : new Board(type, stands);
     }
 
-    /** The finished text of one board: a title followed by the top N players. */
-    private List<String> renderLines(LeaderType type) {
-        List<String> lines = new ArrayList<>();
-        lines.add(format("cageboard.title", type, null, 0, null));
+    /**
+     * How many lines a fully populated board needs: every fixed layout row plus
+     * the ranked rows the token expands into.
+     */
+    private int boardCapacity() {
+        int fixed = 0;
+        for (String entry : layout()) {
+            if (!RANKS_TOKEN.equals(entry.trim())) fixed++;
+        }
+        // At least one rank row, so a board is never all spacers.
+        return fixed + Math.max(SkyWarsReloaded.getCfg().getCageLeaderboardSize(), 1);
+    }
 
+    /**
+     * The finished text of one board. The row order comes from the
+     * {@code cageboard.layout} list in messages.yml, where {@value #RANKS_TOKEN}
+     * stands for the ranked rows and an empty entry is a blank spacer line. An
+     * absent or empty layout falls back to a title directly above the ranks.
+     */
+    private List<String> renderLines(LeaderType type) {
+        List<String> layout = layout();
+        List<String> lines = new ArrayList<>(layout.size() + 1);
+
+        for (String entry : layout) {
+            if (RANKS_TOKEN.equals(entry.trim())) {
+                lines.addAll(renderRanks(type));
+            } else {
+                // A blank entry stays blank: it is a spacer, not a template.
+                lines.add(entry.isEmpty() ? "" : format(entry, type, null, 0, null));
+            }
+        }
+        return lines;
+    }
+
+    /**
+     * The board layout, read fresh so an edited messages.yml applies on the next
+     * repaint. A layout without {@value #RANKS_TOKEN} would render a board with no
+     * players at all, so that case is treated as unconfigured.
+     */
+    private List<String> layout() {
+        List<String> layout = SkyWarsReloaded.getMessaging().getFile().getStringList("cageboard.layout");
+
+        boolean hasRanks = false;
+        if (layout != null) {
+            for (String entry : layout) {
+                if (entry != null && RANKS_TOKEN.equals(entry.trim())) {
+                    hasRanks = true;
+                    break;
+                }
+            }
+        }
+        if (!hasRanks) {
+            return Arrays.asList("cageboard.title", RANKS_TOKEN);
+        }
+
+        // getStringList drops nulls, but an entry could still be null in theory.
+        List<String> safe = new ArrayList<>(layout.size());
+        for (String entry : layout) {
+            safe.add(entry == null ? "" : entry);
+        }
+        return safe;
+    }
+
+    /** The ranked rows on their own, or the single "no data" row. */
+    private List<String> renderRanks(LeaderType type) {
         Leaderboard lbManager = SkyWarsReloaded.getLB();
         List<Leaderboard.LeaderData> topList = lbManager == null ? null : lbManager.getTopList(type);
 
         if (topList == null || topList.isEmpty()) {
-            lines.add(format("cageboard.no-data", type, null, 0, null));
-            return lines;
+            return Collections.singletonList(format("cageboard.no-data", type, null, 0, null));
         }
 
         int size = Math.min(SkyWarsReloaded.getCfg().getCageLeaderboardSize(), topList.size());
+        List<String> rows = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            lines.add(format("cageboard.line", type, topList.get(i), i + 1, rankSymbol(i + 1)));
+            rows.add(format("cageboard.line", type, topList.get(i), i + 1, rankSymbol(i + 1)));
         }
-        return lines;
+        return rows;
     }
 
     /**

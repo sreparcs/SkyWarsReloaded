@@ -4,8 +4,6 @@ leaderboard:
       format:
         - '&4&l≥ &c&lWins Leaderboards &4&l≤'
         - ''
-        - ''
-        - ''
         - '&4❶ {prefix_1}{namecolor_1}{player_1} &7- &c{wins_1} &7-'
         - '&4❷ {prefix_2}{namecolor_2}{player_2} &7- &c{wins_2} &7-'
         - '&4❸ {prefix_3}{namecolor_3}{player_3} &7- &c{wins_3} &7-'
@@ -31,8 +29,6 @@ leaderboard:
     leaders:
       format:
         - '&4&l≥ &c&lKills Leaderboards &4&l≤'
-        - ''
-        - ''
         - ''
         - '&4❶ {prefix_1}{namecolor_1}{player_1} &7- &c{kills_1} &7-'
         - '&4❷ {prefix_2}{namecolor_2}{player_2} &7- &c{kills_2} &7-'
@@ -60,8 +56,6 @@ leaderboard:
       format:
         - '&4&l≥ &c&lXP Leaderboards &4&l≤'
         - ''
-        - ''
-        - ''
         - '&4❶ {prefix_1}{namecolor_1}{player_1} &7- &c{xp_1} &7-'
         - '&4❷ {prefix_2}{namecolor_2}{player_2} &7- &c{xp_2} &7-'
         - '&4❸ {prefix_3}{namecolor_3}{player_3} &7- &c{xp_3} &7-'
@@ -79,8 +73,6 @@ leaderboard:
       format:
         - '&4&l≥ &c&lLosses Leaderboards &4&l≤'
         - ''
-        - ''
-        - ''
         - '&4❶ {prefix_1}{namecolor_1}{player_1} &7- &c{losses_1} &7-'
         - '&4❷ {prefix_2}{namecolor_2}{player_2} &7- &c{losses_2} &7-'
         - '&4❸ {prefix_3}{namecolor_3}{player_3} &7- &c{losses_3} &7-'
@@ -97,8 +89,6 @@ leaderboard:
     leaders:
       format:
         - '&4&l≥ &c&lDeaths Leaderboards &4&l≤'
-        - ''
-        - ''
         - ''
         - '&4❶ {prefix_1}{namecolor_1}{player_1} &7- &c{deaths_1} &7-'
         - '&4❷ {prefix_2}{namecolor_2}{player_2} &7- &c{deaths_2} &7-'
