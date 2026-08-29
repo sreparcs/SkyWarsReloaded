@@ -166,6 +166,7 @@ public class Config {
     private boolean chestRefillEnabled = true;
     private int chestRefillInterval = 60;
     private boolean chestRefillHologramEnabled = true;
+    private boolean chestRefillEmptyMarkerEnabled = true;
     private boolean chestRefillKeepOpen = true;
     private boolean cageLeaderboardsEnabled = true;
     private int cageLeaderboardSize = 5;
@@ -357,7 +358,12 @@ public class Config {
             chestRefillEnabled =    SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.enabled", true);
             chestRefillInterval =   SkyWarsReloaded.get().getConfig().getInt("game.chestRefill.interval", 60);
             chestRefillHologramEnabled = SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.showHologram", true);
-            chestRefillKeepOpen =   SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.keepEmptyChestsOpen", true);
+            chestRefillEmptyMarkerEnabled = SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.showEmptyMarker", true);
+            // Renamed from keepEmptyChestsOpen: the lid is held open for every
+            // searched chest, not just for the ones that ended up empty. Existing
+            // configs still carry the old key, so it decides the default.
+            chestRefillKeepOpen =   SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.keepSearchedChestsOpen",
+                                    SkyWarsReloaded.get().getConfig().getBoolean("game.chestRefill.keepEmptyChestsOpen", true));
             cageLeaderboardsEnabled = SkyWarsReloaded.get().getConfig().getBoolean("game.cageLeaderboards.enabled", true);
             cageLeaderboardSize =   SkyWarsReloaded.get().getConfig().getInt("game.cageLeaderboards.size", 5);
             cageLeaderboardDistance = SkyWarsReloaded.get().getConfig().getDouble("game.cageLeaderboards.distance", 1.4D);
@@ -649,7 +655,8 @@ public class Config {
         SkyWarsReloaded.get().getConfig().set("game.chestRefill.enabled", chestRefillEnabled);
         SkyWarsReloaded.get().getConfig().set("game.chestRefill.interval", chestRefillInterval);
         SkyWarsReloaded.get().getConfig().set("game.chestRefill.showHologram", chestRefillHologramEnabled);
-        SkyWarsReloaded.get().getConfig().set("game.chestRefill.keepEmptyChestsOpen", chestRefillKeepOpen);
+        SkyWarsReloaded.get().getConfig().set("game.chestRefill.showEmptyMarker", chestRefillEmptyMarkerEnabled);
+        SkyWarsReloaded.get().getConfig().set("game.chestRefill.keepSearchedChestsOpen", chestRefillKeepOpen);
         SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.enabled", cageLeaderboardsEnabled);
         SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.size", cageLeaderboardSize);
         SkyWarsReloaded.get().getConfig().set("game.cageLeaderboards.distance", cageLeaderboardDistance);
@@ -819,11 +826,23 @@ public class Config {
         return chestRefillInterval;
     }
 
+    /** Whether the refill countdown floats above a chest a player has opened. */
     public boolean isChestRefillHologramEnabled() {
         return chestRefillHologramEnabled;
     }
 
-    /** Keeps looted chests visually open until the next refill (1.8 only). */
+    /**
+     * Whether an emptied chest gets its red "X" marker.
+     * <p>
+     * Separate from {@link #isChestRefillHologramEnabled()} because the marker is
+     * useful on its own: it does not depend on a refill being scheduled, so it
+     * also works with {@code chestRefill.enabled: false}.
+     */
+    public boolean isChestRefillEmptyMarkerEnabled() {
+        return chestRefillEmptyMarkerEnabled;
+    }
+
+    /** Keeps searched chests visually open until the next refill (1.8 only). */
     public boolean isChestRefillKeepOpen() {
         return chestRefillKeepOpen;
     }

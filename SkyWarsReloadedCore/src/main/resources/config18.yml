@@ -60,7 +60,8 @@ game:
     enabled: true
     interval: 60
     showHologram: true
-    keepEmptyChestsOpen: true
+    showEmptyMarker: true
+    keepSearchedChestsOpen: true
   cageLeaderboards:
     enabled: true
     size: 25

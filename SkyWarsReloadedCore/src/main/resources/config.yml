@@ -56,10 +56,11 @@ game:
   maxMapSize: 1000
   tauntsEnabled: false
   chestRefill:
-    enabled: true
+    enabled: false
     interval: 60
-    showHologram: true
-    keepEmptyChestsOpen: true
+    showHologram: false
+    showEmptyMarker: true
+    keepSearchedChestsOpen: true
   cageLeaderboards:
     enabled: true
     size: 25

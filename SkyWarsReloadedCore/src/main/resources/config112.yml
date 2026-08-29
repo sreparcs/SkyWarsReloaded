@@ -168,10 +168,16 @@ game:
     enabled: true
     # Seconds between two refills
     interval: 60
-    # Show a floating countdown above chests a player has already opened
+    # Show the refill countdown above chests a player has already opened
+    # (needs enabled: true, since without refills there is nothing to count down)
     showHologram: true
-    # Keep a searched chest's lid visually open until the next refill (1.8 only)
-    keepEmptyChestsOpen: true
+    # Show a red X above a chest that has been emptied. Independent of enabled:
+    # with enabled: false the marker simply stays until the match ends
+    showEmptyMarker: true
+    # Keep the lid of any chest a player has searched visually open until the next
+    # refill, or until the match ends when enabled: false (1.8 only). Applies to
+    # every searched chest, whether or not it was emptied
+    keepSearchedChestsOpen: true
   # Four floating leaderboards shown around a player waiting in their start cage
   cageLeaderboards:
     # Whether the boards are shown at all

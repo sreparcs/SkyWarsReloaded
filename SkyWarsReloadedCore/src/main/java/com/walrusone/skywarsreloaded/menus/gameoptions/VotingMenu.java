@@ -4,6 +4,7 @@ import com.walrusone.skywarsreloaded.SkyWarsReloaded;
 import com.walrusone.skywarsreloaded.enums.Vote;
 import com.walrusone.skywarsreloaded.game.GameMap;
 import com.walrusone.skywarsreloaded.managers.MatchManager;
+import com.walrusone.skywarsreloaded.menus.IconMenu;
 import com.walrusone.skywarsreloaded.utilities.Messaging;
 import com.walrusone.skywarsreloaded.utilities.Util;
 import org.bukkit.Bukkit;
@@ -65,71 +66,30 @@ public class VotingMenu {
                 String name = event.getName();
 
                 if (name.equalsIgnoreCase(new Messaging.MessageFormatter().format("items.chest-item"))) {
-                    SkyWarsReloaded.getIC().show(player, gMap.getChestOption().getKey());
-
-                    Vote vote = gMap.getChestOption().getVote(gMap.getPlayerCard(player));
-                    if (vote == Vote.CHESTBASIC)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),11);
-                    else if (vote == Vote.CHESTNORMAL)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),13);
-                    else if (vote == Vote.CHESTOP)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),15);
-                    else if (vote == Vote.CHESTSCAVENGER)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),17);
-                    Util.get().playSound(player, player.getLocation(), SkyWarsReloaded.getCfg().getOpenChestMenuSound(), 1, 1);
+                    openVoteMenu(player, gMap.getChestOption().getKey(),
+                            gMap.getChestOption().getVote(gMap.getPlayerCard(player)),
+                            Vote.CHESTBASIC, Vote.CHESTNORMAL, Vote.CHESTOP, Vote.CHESTSCAVENGER,
+                            SkyWarsReloaded.getCfg().getOpenChestMenuSound());
                 } else if (name.equalsIgnoreCase(new Messaging.MessageFormatter().format("items.health-item"))) {
-                    SkyWarsReloaded.getIC().show(player, gMap.getHealthOption().getKey());
-
-                    Vote vote = gMap.getHealthOption().getVote(gMap.getPlayerCard(player));
-                    if (vote == Vote.HEALTHFIVE)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),11);
-                    else if (vote == Vote.HEALTHTEN)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),13);
-                    else if (vote == Vote.HEALTHFIFTEEN)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),15);
-                    else if (vote == Vote.HEALTHTWENTY)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),17);
-                    Util.get().playSound(player, player.getLocation(), SkyWarsReloaded.getCfg().getOpenHealthMenuSound(), 1, 1);
+                    openVoteMenu(player, gMap.getHealthOption().getKey(),
+                            gMap.getHealthOption().getVote(gMap.getPlayerCard(player)),
+                            Vote.HEALTHFIVE, Vote.HEALTHTEN, Vote.HEALTHFIFTEEN, Vote.HEALTHTWENTY,
+                            SkyWarsReloaded.getCfg().getOpenHealthMenuSound());
                 } else if (name.equalsIgnoreCase(new Messaging.MessageFormatter().format("items.time-item"))) {
-                    SkyWarsReloaded.getIC().show(player, gMap.getTimeOption().getKey());
-
-                    Vote vote = gMap.getTimeOption().getVote(gMap.getPlayerCard(player));
-                    if (vote == Vote.TIMEDAWN)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),11);
-                    else if (vote == Vote.TIMENOON)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),13);
-                    else if (vote == Vote.TIMEDUSK)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),15);
-                    else if (vote == Vote.TIMEMIDNIGHT)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),17);
-                    Util.get().playSound(player, player.getLocation(), SkyWarsReloaded.getCfg().getOpenTimeMenuSound(), 1, 1);
+                    openVoteMenu(player, gMap.getTimeOption().getKey(),
+                            gMap.getTimeOption().getVote(gMap.getPlayerCard(player)),
+                            Vote.TIMEDAWN, Vote.TIMENOON, Vote.TIMEDUSK, Vote.TIMEMIDNIGHT,
+                            SkyWarsReloaded.getCfg().getOpenTimeMenuSound());
                 } else if (name.equalsIgnoreCase(new Messaging.MessageFormatter().format("items.weather-item"))) {
-                    SkyWarsReloaded.getIC().show(player, gMap.getWeatherOption().getKey());
-
-                    Vote vote = gMap.getWeatherOption().getVote(gMap.getPlayerCard(player));
-                    if (vote == Vote.WEATHERSUN)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),11);
-                    else if (vote == Vote.WEATHERRAIN)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),13);
-                    else if (vote == Vote.WEATHERTHUNDER)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),15);
-                    else if (vote == Vote.WEATHERSNOW)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),17);
-                    Util.get().playSound(player, player.getLocation(), SkyWarsReloaded.getCfg().getOpenWeatherMenuSound(), 1, 1);
+                    openVoteMenu(player, gMap.getWeatherOption().getKey(),
+                            gMap.getWeatherOption().getVote(gMap.getPlayerCard(player)),
+                            Vote.WEATHERSUN, Vote.WEATHERRAIN, Vote.WEATHERTHUNDER, Vote.WEATHERSNOW,
+                            SkyWarsReloaded.getCfg().getOpenWeatherMenuSound());
                 } else if (name.equalsIgnoreCase(new Messaging.MessageFormatter().format("items.modifier-item"))) {
-                    SkyWarsReloaded.getIC().show(player, gMap.getModifierOption().getKey());
-
-                    Vote vote = gMap.getModifierOption().getVote(gMap.getPlayerCard(player));
-                    if (vote == Vote.MODIFIERSPEED)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),11);
-                    else if (vote == Vote.MODIFIERJUMP)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),13);
-                    else if (vote == Vote.MODIFIERSTRENGTH)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),15);
-                    else if (vote == Vote.MODIFIERNONE)
-                        Util.get().glowItem(player.getOpenInventory().getTopInventory(),17);
-
-                    Util.get().playSound(player, player.getLocation(), SkyWarsReloaded.getCfg().getOpenModifierMenuSound(), 1, 1);
+                    openVoteMenu(player, gMap.getModifierOption().getKey(),
+                            gMap.getModifierOption().getVote(gMap.getPlayerCard(player)),
+                            Vote.MODIFIERSPEED, Vote.MODIFIERJUMP, Vote.MODIFIERSTRENGTH, Vote.MODIFIERNONE,
+                            SkyWarsReloaded.getCfg().getOpenModifierMenuSound());
                 } else if (name.equalsIgnoreCase(new Messaging.MessageFormatter().format("items.exit-menu-item"))) {
                     player.closeInventory();
                 }
@@ -138,5 +98,32 @@ public class VotingMenu {
             SkyWarsReloaded.getIC().show(player, null);
         }
 
+    }
+
+    /**
+     * Opens one of the five vote sub-menus and highlights the option this player
+     * has already voted for.
+     * <p>
+     * The highlight is applied to the sub-menu's own inventory rather than to
+     * whatever the player currently has open: the window itself is swapped one
+     * tick later, so at this point the player is still looking at this menu.
+     *
+     * @param voted the player's current vote, or null when they have not voted
+     */
+    private void openVoteMenu(Player player, String key, Vote voted,
+                              Vote slotEleven, Vote slotThirteen, Vote slotFifteen, Vote slotSeventeen,
+                              String openSound) {
+        SkyWarsReloaded.getIC().show(player, key);
+
+        IconMenu menu = SkyWarsReloaded.getIC().getMenu(key);
+        if (menu != null && voted != null) {
+            Inventory target = menu.getInventory(0);
+            if (voted == slotEleven) Util.get().glowItem(target, 11);
+            else if (voted == slotThirteen) Util.get().glowItem(target, 13);
+            else if (voted == slotFifteen) Util.get().glowItem(target, 15);
+            else if (voted == slotSeventeen) Util.get().glowItem(target, 17);
+        }
+
+        Util.get().playSound(player, player.getLocation(), openSound, 1, 1);
     }
 }

@@ -36,6 +36,14 @@ import java.util.Set;
  * time is exposed to the scoreboard through the {next_refill} placeholder and,
  * optionally, through floating holograms above the chests a player has opened.
  * On 1.8 a searched chest additionally keeps its lid open until the next refill.
+ * <p>
+ * The two "already searched" hints do not depend on the refill itself: with
+ * {@code chestRefill.enabled: false} there is no countdown and no timer
+ * hologram, but a searched chest still keeps its lid open and an emptied chest
+ * still gets its {@code ✘} marker - they simply stay that way for the rest
+ * of the match, because nothing ever refills the chest again. Each of the three
+ * has its own config switch: {@code showHologram} for the countdown,
+ * {@code showEmptyMarker} for the marker, {@code keepSearchedChestsOpen} for the lid.
  */
 public class ChestRefillManager {
 
@@ -43,6 +51,10 @@ public class ChestRefillManager {
     private static final int FALLBACK_INTERVAL = 60;
     /** Label of the "this chest is empty" hologram. */
     private static final String EMPTY_LABEL = ChatColor.RED + "" + ChatColor.BOLD + "\u2718";
+    /** Height of the countdown hologram above the chest block. */
+    private static final double TIMER_OFFSET = 0.8D;
+    /** Height of the "empty" marker when it has to sit above the countdown. */
+    private static final double EMPTY_STACKED_OFFSET = 1.1D;
 
     private final GameMap gMap;
     // Holograms are keyed by chest block so a chest is never decorated twice.
@@ -83,8 +95,15 @@ public class ChestRefillManager {
      * match tick; does nothing unless the match is actually being played.
      */
     public void tick() {
-        if (!SkyWarsReloaded.getCfg().isChestRefillEnabled()) return;
         if (gMap.getMatchState() != MatchState.PLAYING) return;
+
+        // Both hologram kinds need this once-per-second safety net: a chest can
+        // vanish without any event this plugin sees.
+        dropOrphanedHolograms();
+
+        // Without refills there is no countdown to advance; the "empty" markers
+        // and the held-open lids stay as they are for the rest of the match.
+        if (!SkyWarsReloaded.getCfg().isChestRefillEnabled()) return;
 
         if (secondsRemaining > 0) {
             secondsRemaining--;
@@ -163,9 +182,12 @@ public class ChestRefillManager {
 
         ArmorStand timer = timerStands.get(loc);
         if (timer == null || timer.isDead()) {
-            timer = spawnStand(world, loc, 0.8D, timerText());
+            timer = spawnStand(world, loc, TIMER_OFFSET, timerText());
             if (timer == null) return;
             timerStands.put(loc, timer);
+            // A marker created while refilling was off occupies the countdown's
+            // slot: drop it so it is respawned one row higher.
+            despawn(emptyStands.remove(loc));
         } else {
             timer.setCustomName(timerText());
         }
@@ -174,15 +196,17 @@ public class ChestRefillManager {
     }
 
     /**
-     * Keeps a visited chest visually open until the next refill, so players can
-     * see from a distance which chests have already been searched.
+     * Keeps a visited chest visually open until the next refill - or, when
+     * refilling is disabled, until the match ends - so players can see from a
+     * distance which chests have already been searched.
      * <p>
      * Only available on 1.8: the effect relies on re-sending the chest lid block
      * action every tick, which is a no-op on clients that animate the lid from
      * their own block-entity state.
      */
     public void holdChestOpen(CoordLoc loc) {
-        if (!SkyWarsReloaded.getCfg().isChestRefillEnabled()) return;
+        // Deliberately independent of chestRefill.enabled: without refills the lid
+        // simply stays open until the match ends.
         if (!SkyWarsReloaded.getCfg().isChestRefillKeepOpen()) return;
         if (!ChestLidPacket.isSupported()) return;
         if (gMap.getMatchState() != MatchState.PLAYING) return;
@@ -268,9 +292,18 @@ public class ChestRefillManager {
         return ChestLidPacket.send(viewers, block, open);
     }
 
-    /** Adds or removes the "empty" marker depending on the chest contents. */
+    /**
+     * Adds or removes the "empty" marker depending on the chest contents.
+     * <p>
+     * Unlike the countdown this does not need a refill to be scheduled, so it
+     * also works with {@code chestRefill.enabled: false}. It has its own switch,
+     * {@code chestRefill.showEmptyMarker}, because {@code showHologram} is about
+     * the countdown.
+     */
     public void updateEmptyHologram(CoordLoc loc) {
-        if (!timerStands.containsKey(loc)) return;
+        if (!SkyWarsReloaded.getCfg().isChestRefillEmptyMarkerEnabled()) return;
+        if (gMap.getMatchState() != MatchState.PLAYING) return;
+        if (!isArenaChest(loc)) return;
 
         World world = gMap.getCurrentWorld();
         if (world == null) return;
@@ -278,7 +311,10 @@ public class ChestRefillManager {
         ArmorStand empty = emptyStands.get(loc);
         if (isChestEmpty(world, loc)) {
             if (empty == null || empty.isDead()) {
-                ArmorStand spawned = spawnStand(world, loc, 1.1D, EMPTY_LABEL);
+                // Stack above the countdown when there is one; without refills the
+                // marker is alone and sits directly above the chest instead.
+                double offset = timerStands.containsKey(loc) ? EMPTY_STACKED_OFFSET : TIMER_OFFSET;
+                ArmorStand spawned = spawnStand(world, loc, offset, EMPTY_LABEL);
                 if (spawned != null) emptyStands.put(loc, spawned);
             }
         } else if (empty != null) {
@@ -318,10 +354,15 @@ public class ChestRefillManager {
      * chest can also disappear without any event this plugin sees, for example
      * through WorldEdit, a custom ability or another plugin removing the block.
      */
-    private void dropOrphanedHolograms(World world) {
-        if (timerStands.isEmpty()) return;
+    private void dropOrphanedHolograms() {
+        if (timerStands.isEmpty() && emptyStands.isEmpty()) return;
 
-        for (CoordLoc loc : new ArrayList<>(timerStands.keySet())) {
+        World world = gMap.getCurrentWorld();
+        if (world == null) return;
+
+        Set<CoordLoc> decorated = new HashSet<>(timerStands.keySet());
+        decorated.addAll(emptyStands.keySet());
+        for (CoordLoc loc : decorated) {
             if (isChestPresent(world, loc)) continue;
             removeHologram(loc);
         }
@@ -358,15 +399,6 @@ public class ChestRefillManager {
     }
 
     private void refreshTimerHolograms() {
-        if (timerStands.isEmpty()) return;
-
-        World world = gMap.getCurrentWorld();
-        if (world == null) return;
-
-        // Once per second, before repainting the countdown, forget the chests that
-        // no longer exist. Without this a chest blown up by TNT leaves its
-        // hologram floating until the match ends.
-        dropOrphanedHolograms(world);
         if (timerStands.isEmpty()) return;
 
         String text = timerText();

@@ -52,14 +52,17 @@ public class IconMenuController
         return false;
     }
 
+    /**
+     * Opens the first page of a menu.
+     *
+     * @param key persistent menu key, or null for the player's own menu
+     */
     public void show(Player player, @Nullable String key) {
-        if (key != null) {
-            if (persistantMenus.containsKey(key)) {
-                ((IconMenu) persistantMenus.get(key)).openInventory(player, 0);
-            }
-        } else if (menu.containsKey(player)) {
-            ((IconMenu) menu.get(player)).openInventory(player, 0);
+        IconMenu target = key != null ? persistantMenus.get(key) : menu.get(player);
+        if (target == null) {
+            return;
         }
+        target.openInventory(player, 0);
     }
 
     private void destroy(Player key) {
@@ -87,18 +90,50 @@ public class IconMenuController
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    /**
+     * Forgets a player's temporary menu once they have really left it.
+     * <p>
+     * The check is delayed because closing one page to open the next also fires
+     * this event: five ticks later the follow-up window is open and the player is
+     * still inside the menu, so only a genuine exit reaches {@link #destroy}.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClose(final InventoryCloseEvent event) {
-        if (((event.getPlayer() instanceof Player)) && (menu.containsKey(event.getPlayer()))) {
+        if (!(event.getPlayer() instanceof Player)) return;
+        if (!menu.containsKey(event.getPlayer())) return;
 
+        new BukkitRunnable() {
+            public void run() {
+                Player player = (Player) event.getPlayer();
+                IconMenu current = menu.get(player);
+                // Already gone, or replaced by a menu this player never opened.
+                if (current == null) return;
 
-            new BukkitRunnable() {
-                public void run() {
-                    if (((IconMenu) menu.get(event.getPlayer())).getInventories().contains(event.getPlayer().getOpenInventory())) {
-                        IconMenuController.this.destroy((Player) event.getPlayer());
-                    }
+                if (!isViewing(player, current)) {
+                    IconMenuController.this.destroy(player);
                 }
-            }.runTaskLater(SkyWarsReloaded.get(), 5L);
+            }
+        }.runTaskLater(SkyWarsReloaded.get(), 5L);
+    }
+
+    /**
+     * True while the player has one of the menu's pages open.
+     * <p>
+     * Compared against the top inventory of the open view: {@code getOpenInventory}
+     * itself returns an {@link org.bukkit.inventory.InventoryView}, which can never
+     * be an element of the page list.
+     */
+    private boolean isViewing(Player player, IconMenu iconMenu) {
+        if (player.getOpenInventory() == null) return false;
+
+        Inventory top = player.getOpenInventory().getTopInventory();
+        if (top == null) return false;
+
+        for (Inventory inv : iconMenu.getInventories()) {
+            if (inv != null && inv.equals(top)) {
+                return true;
+            }
         }
+        return false;
     }
 }

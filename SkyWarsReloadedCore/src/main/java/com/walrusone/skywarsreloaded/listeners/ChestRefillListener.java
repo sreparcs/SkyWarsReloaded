@@ -27,6 +27,10 @@ import java.util.List;
  * <p>
  * On 1.8 a chest a player has searched also keeps its lid open until the next
  * refill, so it is visible from a distance that someone was already there.
+ * <p>
+ * The lid and the "empty" marker are handled by the manager independently of
+ * {@code chestRefill.enabled}, so both hints still work on a server that does
+ * not refill its chests at all - they then last for the rest of the match.
  */
 public class ChestRefillListener implements Listener {
 
